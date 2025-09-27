@@ -32,7 +32,7 @@
       box-shadow: 0 10px 30px rgba(0,0,0,.12);
     }
     .map-header {
-      display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;
+      display: flex; flex-direction: column; justify-content: space-between; margin-bottom: 8px; gap:1em;
       font-size: 14px; color: #333;
     }
     #minimap {
@@ -71,14 +71,18 @@
       position: absolute; width: 16px; height: 16px; background: #ef4444; border: 2px solid #fff;
       border-radius: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 0 3px rgba(239,68,68,.25);
     }
-
+    .scale{
+      display: flex; align-items: center; margin-top: 4px; text-align: center;
+    }
     /* Barra de escala (5 m) */
     .scale-bar {
-      position: absolute; left: 12px; bottom: 10px; height: 6px; background: #111; border-radius: 3px;
+      height: 6px;  border-radius: 3px; font-size: 12px; color: #ffffff; font-weight: 600;
+      background: rgba(61, 212, 99, 0.9);
     }
     .scale-label {
-      position: absolute; left: 12px; bottom: 20px; font-size: 12px; color: #111; font-weight: 600;
-      background: rgba(255,255,255,.9); padding: 1px 6px; border-radius: 6px; border: 1px solid rgba(0,0,0,.06);
+      font-size: 12px; color: #1f1e1e; font-weight: 600;
+       text-align: center;
+       padding: 1px 6px; border-radius: 6px; 
     }
 
     /* Eixos */
@@ -93,7 +97,7 @@
   </style>
 </head>
 <body>
-  <img src="/assets/images/UWBike-logo.jpg" alt="UWBike Logo" style="height: 80px; margin-bottom: 10px;" />
+  <img src="assets\images\UWBike-logo.jpg" alt="UWBike Logo" style="height: 80px; margin-bottom: 10px;" />
   <h1 style="color: rgb(76, 238, 84);">UWBike</h1>
   <h2>Painel UWB</h2>
   <div id="painel">
@@ -105,17 +109,21 @@
   <div class="map-wrap">
     <div class="map-header">
       <div><strong>Mini-mapa do Pátio</strong> — 200 m²</div>
-      <div class="axis-label-x">X (m)</div>
+          <!-- escala de 5 m (largura em px = (5 / 20) * var(--map-w)) -->
+           <div class="scale">
+              <div class="scale-bar" id="scaleBar"></div>
+              <div class ="scale-label"> =   equivale a 5 metros do pátio</div>
+           </div>
+       
     </div>
     <div style="position: relative;">
       <div id="minimap">
-        <!-- escala de 5 m (largura em px = (5 / 20) * var(--map-w)) -->
-        <div class="scale-bar" id="scaleBar"></div>
-        <div class="scale-label">5 m</div>
     
       </div>
           <div class="axis-label-y">Y (m)</div>
+        
     </div>
+   <div class="axis-label-x">X (m)</div>
   </div>
 
   <script>
@@ -180,7 +188,9 @@
       client.subscribe("fiap/iot/uwb/#");
     });
 
-    client.on("message", (topic, message) => {
+   const consultasAtivas = {}; // chave = idMoto, valor = true/false
+
+    client.on("message", async (topic, message) => {
       try {
         const data = JSON.parse(message.toString());
         const ancora = data.ancora;
@@ -191,21 +201,23 @@
 
         if (distancias.hasOwnProperty(ancora)) distancias[ancora] = distancia;
 
-        // Debounce de consulta ao backend (evita spam)
-        if (distancias.ancora1 && distancias.ancora2 && distancias.ancora3 && !consultaPendente) {
-          consultaPendente = true;
-          setTimeout(() => {
-            consultarBackend(distancias).finally(() => consultaPendente = false);
-          }, 250); // pequeno atraso para agrupar mensagens
+        // Verifica se todas as distâncias estão preenchidas
+        if (distancias.ancora1 && distancias.ancora2 && distancias.ancora3) {
+          const idMoto = 1; // ou pegar dinamicamente
+          if (!consultasAtivas[idMoto]) {
+            consultasAtivas[idMoto] = true; // bloqueia novas requisições
+            await consultarBackend(distancias, idMoto);
+            consultasAtivas[idMoto] = false; // libera após terminar
+          }
         }
       } catch (err) {
         console.error("Erro ao processar MQTT:", err);
       }
     });
 
-    async function consultarBackend(dist) {
+    async function consultarBackend(dist, idMoto) {
       const body = {
-        idMoto: 1,
+        idMoto,
         idPatio: 1,
         d1: dist.ancora1,
         d2: dist.ancora2,

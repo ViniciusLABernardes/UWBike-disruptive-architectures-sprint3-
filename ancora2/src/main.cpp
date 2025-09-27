@@ -12,7 +12,7 @@ const char* ID_MQTT = "ancora2";
 const char* TOPIC_PUBLISH = "fiap/iot/uwb/ancora2";
 
 #define PIN_LED 15
-#define PUBLISH_DELAY 10000
+#define PUBLISH_DELAY 30000
 #define TAMANHO 200
 
 WiFiClient espClient;
