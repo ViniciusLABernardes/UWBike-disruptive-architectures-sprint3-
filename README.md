@@ -14,6 +14,39 @@
 
 
 ## Procedimentos para rodar a simulação:
+- ### descompacte a pasta UWBike-iot-java, abra a pasta UWBike dentro dela no Intellij
+- ### Altere as configurações de login e senha do banco(ou utilize a que esta) no application.properties
+- ### Execute o projeto java pelo Intellij
+- ### Caso tenha alterado as credenciais do oracle para a sua: 
+ - - utilize o git bash para rodar estes curls:
+  Criar Pátio
+    curl -X POST "http://localhost:8080/api/patio" \
+-H "Content-Type: application/json" \
+-d '{
+  "logradouro": "Av. Prof. Celestino Bourroul",
+  "numero": 363,
+  "complemento": "Em frente ao EMEI Nelson Mandela",
+  "cep": "02710-000",
+  "cidade": "São Paulo",
+  "uf": "SP",
+  "pais": "Brasil",
+  "lotacao": 200
+}'
+
+curl -X POST "http://localhost:8080/api/moto" \
+-H "Content-Type: application/json" \
+-d '{
+  "modelo": "MottuSport",
+  "placa": "FQBE303",
+  "chassi": "7AD111010T2003890"
+}'
+
+curl -X POST "http://localhost:8080/api/moto-patio" \
+-H "Content-Type: application/json" \
+-d '{
+  "idMoto": 1,
+  "idPatio": 1
+}'
 - ### Tenha uma conta no wokwi
 - ### Instale as extensões Wokwi Simulator e PlatformIO IDE
 - ### Rode os comandos no terminal dentro da pasta raiz do projeto:
@@ -22,8 +55,8 @@
   - pio run -e ancora2
   - pio run -e ancora3
 - ### Abra cada pasta ancora em uma janela diferente no vscode
-- ### Abra a pagina index.html do projeto
- ### Pronto, agora você verá um dashboard trazendo as informações da distancia da moto(atualmente mockada) de cada âncora(atualmente simulada)
+- ### Abra ou rode com live server a pagina index.html do projeto
+ ### Pronto, agora você verá um dashboard trazendo as informações da distancia da moto de cada âncora(atualmente simulada) + um mini mapa demonstração de um patio de 200m2 com as âncoras posicionadas.  
 
  ## Resultados:
 
