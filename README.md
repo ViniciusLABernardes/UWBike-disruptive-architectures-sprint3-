@@ -19,8 +19,8 @@
 - ### Execute o projeto java pelo Intellij
 - ### Caso tenha alterado as credenciais do oracle para a sua: 
  - - utilize o git bash para rodar estes curls:
-  Criar Pátio
-    curl -X POST "http://localhost:8080/api/patio" \
+ 
+ curl -X POST "http://localhost:8080/api/patio" \
 -H "Content-Type: application/json" \
 -d '{
   "logradouro": "Av. Prof. Celestino Bourroul",
