@@ -64,9 +64,14 @@ curl -X POST "http://localhost:8080/api/moto-patio" \
 
 ![diagramasrodando](https://github.com/user-attachments/assets/bf8982d4-dd99-4c8c-ac7d-542feb1a66b1)
 
-### Página web recendo as distancias por requisição MQTT:
+### Página web:
 
-![iotweb](https://github.com/user-attachments/assets/7c05676f-6e9a-41d0-aa43-90fab62e8771)
+(https://github.com/user-attachments/assets/5d523ab3-72a1-4f4a-bf48-7d69b896d8a4)
+
+### Excessão de moto fora do pátio:
+
+ (https://github.com/user-attachments/assets/09f79310-3732-44ab-adf1-905e522c8352)
+
 
 
 ## Tecnologias Utilizadas :
