@@ -75,25 +75,36 @@ curl -X POST "http://localhost:8080/api/moto-patio" \
 
 
 ## Tecnologias Utilizadas :
-⚙️ Hardware Simulado
+    ⚙️ Hardware Simulado
 
     ESP32: Microcontrolador principal usado para simular as âncoras (receptores).
 
+    💻 Ambiente de Desenvolvimento
 
-💻 Ambiente de Desenvolvimento
+    PlatformIO: Ambiente baseado em VS Code para compilar, programar e simular os ESP32.
 
-    PlatformIO: Ambiente de desenvolvimento baseado em VS Code, usado para compilar, programar e simular os ESP32.
+    Wokwi: Ferramenta online que simula eletrônica, incluindo ESP32 e sensores, usada para criar e rodar diagramas de simulação (diagram.json, wokwi.toml).
 
-    Wokwi: Ferramenta online que simula eletrônica, incluindo ESP32 e sensores, usada para criar e rodar os diagramas de simulação (diagram.json, wokwi.toml).
-
-📡 Comunicação
+    📡 Comunicação
 
     MQTT: Protocolo leve de mensagens utilizado para enviar as distâncias medidas pelas âncoras para um broker.
 
     Broker MQTT (HiveMQ público): Usado como ponto central de troca de mensagens entre as âncoras e o sistema externo.
 
-🌐 Frontend Web
+    🌐 Frontend Web
 
     HTML + JavaScript: Painel web simples para exibir em tempo real as distâncias recebidas de cada âncora via MQTT.
 
     MQTT.js: Biblioteca JavaScript usada no navegador para se conectar ao broker MQTT e escutar mensagens dos tópicos.
+
+    Validação e regras de negócio: Garantia de que posições da moto estejam dentro do pátio antes de salvar o histórico.
+
+    ⚙️ Backend
+
+    Java + Spring Boot: Aplicação responsável por receber as distâncias das âncoras via requisições HTTP, calcular a posição da moto no pátio e salvar o histórico no banco de dados.
+
+    Spring MVC: Criação de endpoints REST (/moto-patio/posicao, /moto-patio/salvarHistorico).
+
+    Spring Data JPA + Hibernate: Mapeamento de entidades e persistência no banco Oracle.
+
+    DTOs: Transferência de dados entre frontend e backend de forma organizada.
