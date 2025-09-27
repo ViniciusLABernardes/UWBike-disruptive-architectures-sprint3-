@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <title>Painel UWB UWBike- Distâncias das Âncoras</title>
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <style>
+    :root {
+      --map-w: 600px; /* largura do minimapa (proporção 2:1) */
+      --map-h: 300px; /* altura do minimapa */
+    }
+    body {
+      font-family: system-ui, sans-serif;
+      background: #f0f2f5;
+      padding: 24px;
+      display: grid;
+      place-items: center;
+      gap: 20px;
+    }
+    h1 { margin: 0; }
+    #painel {
+      display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;
+    }
+    .ancora {
+      padding: 12px 14px; border-radius: 12px; background: #fff; min-width: 220px;
+      box-shadow: 0 6px 20px rgba(0,0,0,.08); font-weight: 600; text-align: center;
+    }
+
+    /* Container do mapa com eixos/grade */
+    .map-wrap {
+      background: #fff; border-radius: 14px; padding: 12px 16px 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.12);
+    }
+    .map-header {
+      display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;
+      font-size: 14px; color: #333;
+    }
+    #minimap {
+      position: relative; width: var(--map-w); height: var(--map-h);
+      border: 2px solid #222; border-radius: 10px; overflow: hidden;
+      background:
+        /* linhas verticais (cada 1 m) */
+        repeating-linear-gradient(
+          to right,
+          rgba(0,0,0,.06) 0px,
+          rgba(0,0,0,.06) 1px,
+          transparent 1px,
+          transparent calc((var(--map-w) / 20))
+        ),
+        /* linhas horizontais (cada 1 m) */
+        repeating-linear-gradient(
+          to bottom,
+          rgba(0,0,0,.06) 0px,
+          rgba(0,0,0,.06) 1px,
+          transparent 1px,
+          transparent calc((var(--map-h) / 10))
+        ),
+        /* fundo */
+        #fafafa;
+    }
+    /* Marcadores */
+    .ancora-dot {
+      position: absolute; width: 12px; height: 12px; background: #2563eb; border: 2px solid #fff;
+      border-radius: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 0 2px rgba(37,99,235,.25);
+    }
+    .ancora-label {
+      position: absolute; transform: translate(-50%, -120%); font-size: 12px; color: #1f2937; font-weight: 600;
+      background: rgba(255,255,255,.9); padding: 1px 6px; border-radius: 6px; border: 1px solid rgba(0,0,0,.06);
+    }
+    .moto-dot {
+      position: absolute; width: 16px; height: 16px; background: #ef4444; border: 2px solid #fff;
+      border-radius: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 0 3px rgba(239,68,68,.25);
+    }
+
+    /* Barra de escala (5 m) */
+    .scale-bar {
+      position: absolute; left: 12px; bottom: 10px; height: 6px; background: #111; border-radius: 3px;
+    }
+    .scale-label {
+      position: absolute; left: 12px; bottom: 20px; font-size: 12px; color: #111; font-weight: 600;
+      background: rgba(255,255,255,.9); padding: 1px 6px; border-radius: 6px; border: 1px solid rgba(0,0,0,.06);
+    }
+
+    /* Eixos */
+    .axis-label-x, .axis-label-y {
+      font-size: 12px; color: #111; font-weight: 700;
+    }
+    .axis-label-x { text-align: center; margin-top: 6px; }
+    .axis-label-y {
+      position: absolute; left: -28px; top: 50%; transform: rotate(-90deg) translateY(50%);
+      transform-origin: left top; white-space: nowrap;
+    }
+  </style>
+</head>
+<body>
+  <img src="/assets/images/UWBike-logo.jpg" alt="UWBike Logo" style="height: 80px; margin-bottom: 10px;" />
+  <h1 style="color: rgb(76, 238, 84);">UWBike</h1>
+  <h2>Painel UWB</h2>
+  <div id="painel">
+    <div id="ancora1" class="ancora">Âncora 1: aguardando...</div>
+    <div id="ancora2" class="ancora">Âncora 2: aguardando...</div>
+    <div id="ancora3" class="ancora">Âncora 3: aguardando...</div>
+  </div>
+
+  <div class="map-wrap">
+    <div class="map-header">
+      <div><strong>Mini-mapa do Pátio</strong> — 200 m²</div>
+      <div class="axis-label-x">X (m)</div>
+    </div>
+    <div style="position: relative;">
+      <div id="minimap">
+        <!-- escala de 5 m (largura em px = (5 / 20) * var(--map-w)) -->
+        <div class="scale-bar" id="scaleBar"></div>
+        <div class="scale-label">5 m</div>
+    
+      </div>
+          <div class="axis-label-y">Y (m)</div>
+    </div>
+  </div>
+
+  <script>
+    // === Dimensões reais do pátio ===
+    const patioWidthM = 20;  // X em metros
+    const patioHeightM = 10; // Y em metros
+
+    // Largura/altura do minimapa (px) — mantidas em CSS (variáveis)
+    const minimap = document.getElementById('minimap');
+    const mapW = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--map-w'));
+    const mapH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--map-h'));
+
+    // Barra de escala de 5 m
+    const scaleBar = document.getElementById('scaleBar');
+    const scaleMeters = 5;
+    scaleBar.style.width = `${(scaleMeters / patioWidthM) * mapW}px`;
+
+    // === Helper: converter coordenadas reais (m) -> posição CSS (%) ===
+    function toPercentX(xm) {
+      const clamped = Math.max(0, Math.min(patioWidthM, xm));
+      return (clamped / patioWidthM) * 100;
+    }
+    function toPercentY(ym) {
+      const clamped = Math.max(0, Math.min(patioHeightM, ym));
+      return (clamped / patioHeightM) * 100;
+    }
+
+    // === Posicionamento de âncoras (exemplo) ===
+    // Ajuste para as coordenadas reais do seu pátio (em metros)
+    const ancorasCoords = {
+      ancora1: { x: 1,  y: 1  },   // canto inferior esquerdo (m)
+      ancora2: { x: 19, y: 1  },   // canto inferior direito (m)
+      ancora3: { x: 10, y: 9  }    // topo central (m)
+    };
+
+    // Renderiza âncoras
+    for (const [id, c] of Object.entries(ancorasCoords)) {
+      const dot = document.createElement('div');
+      dot.className = 'ancora-dot';
+      dot.style.left = toPercentX(c.x) + '%';
+      dot.style.top  = (100 - toPercentY(c.y)) + '%'; // Y crescente pra cima (origem no canto inferior esquerdo)
+      minimap.appendChild(dot);
+
+      const lbl = document.createElement('div');
+      lbl.className = 'ancora-label';
+      lbl.textContent = id.toUpperCase();
+      lbl.style.left = toPercentX(c.x) + '%';
+      lbl.style.top  = (100 - toPercentY(c.y)) + '%';
+      minimap.appendChild(lbl);
+    }
+
+    // === MQTT + Backend ===
+    const client = mqtt.connect("wss://broker.hivemq.com:8884/mqtt");
+    let distancias = { ancora1: null, ancora2: null, ancora3: null };
+    let ultimaMoto = null;
+    let ultimaPosicaoEnviada = null;
+    let motoDot = null;
+    let consultaPendente = false;
+
+    client.on("connect", () => {
+      console.log("Conectado ao broker MQTT!");
+      client.subscribe("fiap/iot/uwb/#");
+    });
+
+    client.on("message", (topic, message) => {
+      try {
+        const data = JSON.parse(message.toString());
+        const ancora = data.ancora;
+        const distancia = Number(data.distancia).toFixed(2);
+
+        const div = document.getElementById(ancora);
+        if (div) div.textContent = `${ancora.replace('ancora','Âncora ')}: ${distancia} m`;
+
+        if (distancias.hasOwnProperty(ancora)) distancias[ancora] = distancia;
+
+        // Debounce de consulta ao backend (evita spam)
+        if (distancias.ancora1 && distancias.ancora2 && distancias.ancora3 && !consultaPendente) {
+          consultaPendente = true;
+          setTimeout(() => {
+            consultarBackend(distancias).finally(() => consultaPendente = false);
+          }, 250); // pequeno atraso para agrupar mensagens
+        }
+      } catch (err) {
+        console.error("Erro ao processar MQTT:", err);
+      }
+    });
+
+    async function consultarBackend(dist) {
+      const body = {
+        idMoto: 1,
+        idPatio: 1,
+        d1: dist.ancora1,
+        d2: dist.ancora2,
+        d3: dist.ancora3
+      };
+      try {
+        const res = await fetch("http://localhost:8080/api/moto-patio/posicao", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body)
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        ultimaMoto = await res.json(); // { posicaoX, posicaoY, id_moto, ... }
+        desenharMoto(ultimaMoto.posicaoX, ultimaMoto.posicaoY);
+      } catch (e) {
+        console.error("Erro backend /posicao:", e);
+      }
+    }
+
+    const alerta = document.createElement('div');
+    alerta.id = "alerta-fora";
+    alerta.textContent = "⚠️ Moto está fora do pátio!";
+    alerta.style.cssText = `
+      display: none;
+      margin-top: 10px;
+      padding: 10px 15px;
+      background: #ffcccc;
+      color: #a10000;
+      font-weight: bold;
+      border-radius: 8px;
+      text-align: center;
+      border: 1px solid #a10000;
+    `;
+    document.body.appendChild(alerta);
+
+    // Modificar a função desenharMoto:
+    function desenharMoto(x, y) {
+      const foraArea =
+        x < 0 || x > patioWidthM ||
+        y < 0 || y > patioHeightM;
+
+      if (foraArea) {
+        // Mostra alerta e não desenha o ponto
+        alerta.style.display = "block";
+        if (motoDot) {
+          motoDot.remove();
+          motoDot = null;
+        }
+        return;
+      }
+
+      // Se estiver dentro do pátio, some com alerta
+      alerta.style.display = "none";
+
+      // Remove o ponto anterior (se existir)
+      if (motoDot) motoDot.remove();
+
+      // cria novo ponto
+      motoDot = document.createElement('div');
+      motoDot.className = 'moto-dot';
+      motoDot.style.left = toPercentX(x) + '%';
+      motoDot.style.top  = (100 - toPercentY(y)) + '%'; // eixo Y para cima
+      minimap.appendChild(motoDot);
+    }
+
+    // Envia histórico a cada 1 minuto apenas se a posição mudou
+    setInterval(() => {
+      if (!ultimaMoto) return;
+      const pos = { x: Number(ultimaMoto.posicaoX), y: Number(ultimaMoto.posicaoY) };
+
+      if (ultimaPosicaoEnviada && Math.abs(ultimaPosicaoEnviada.x - pos.x) < 0.001 && Math.abs(ultimaPosicaoEnviada.y - pos.y) < 0.001) {
+        return; // praticamente igual — não envia
+      }
+
+      const body = { idMoto: ultimaMoto.id_moto, idPatio:1, posicaoX: pos.x, posicaoY: pos.y };
+
+      fetch("http://localhost:8080/api/moto-patio/salvarHistorico", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      })
+      .then(r => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        console.log("Histórico salvo:", body);
+        ultimaPosicaoEnviada = pos;
+      })
+      .catch(e => console.error("Erro salvando histórico:", e));
+    }, 60000);
+  </script>
+</body>
+</html>

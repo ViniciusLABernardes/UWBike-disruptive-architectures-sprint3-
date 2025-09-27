@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "author": "Vinícius,Edvan e Rafael",
+  "editor": "wokwi",
+  "parts": [
+    {
+      "type": "wokwi-esp32-devkit-v1",
+      "id": "esp_ancora1",
+      "top": -50,
+      "left": 50,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led_ancora2",
+      "top": 0,
+      "left": 100,
+      "attrs": { "color": "blue" }
+    }
+  ],
+  "connections": [
+    ["esp_ancora1:15", "led_ancora1:A", "green", []],
+    ["led_ancora1:C", "esp_ancora1:GND", "black", []]
+  ],
+  "dependencies": {}
+}
