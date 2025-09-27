@@ -66,11 +66,11 @@ curl -X POST "http://localhost:8080/api/moto-patio" \
 
 ### Página web:
 
-(https://github.com/user-attachments/assets/5d523ab3-72a1-4f4a-bf48-7d69b896d8a4)
+![dashboard](https://github.com/user-attachments/assets/5d523ab3-72a1-4f4a-bf48-7d69b896d8a4)
 
 ### Excessão de moto fora do pátio:
 
- (https://github.com/user-attachments/assets/09f79310-3732-44ab-adf1-905e522c8352)
+![dashboardexcessao](https://github.com/user-attachments/assets/09f79310-3732-44ab-adf1-905e522c8352)
 
 
 
